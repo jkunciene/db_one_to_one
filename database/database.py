@@ -50,9 +50,6 @@ def create_customers_table():
         close_connection(connection, cursor)
 
 
-create_customers_table()
-
-
 def create_account_table():
     try:
         connection, cursor = open_connection()
@@ -73,33 +70,47 @@ def create_account_table():
         close_connection(connection, cursor)
 
 
-create_account_table()
-
-
 def create_customers(customer):
     query = """INSERT INTO customers VALUES (? ,?, ?)"""
     params = (customer.customer_id, customer.customer_name, customer.bank_account_id)
     query_database(query, params)
 
 
-def create_account(bankAccount):
+def create_account(bankAccount, customer_id):
     query = """INSERT INTO account VALUES (? ,?, ?)"""
-    params = (bankAccount.bank_account_id, bankAccount.bank_account_number, bankAccount.customer_id)
+    params = (bankAccount.bank_account_id, bankAccount.bank_account_number, customer_id)
+    query_database(query, params)
+
+
+def update_customers(bank_account_id, customer_id):
+    query = """UPDATE customers SET account_id = ? WHERE customers_id = ?"""
+    params = (bank_account_id, customer_id)
     query_database(query, params)
 
 
 def create_records(customer, bankAccount):
+
     create_customers(customer)
-    create_account(bankAccount)
-    customer.customer_id = (cursor.execute("""SELECT customer_id
-                                            FROM customer
-                                            WHERE customer_name DESC
-                                            LIMIT 1
-                                            """))
 
+    connection, cursor = open_connection()
+    customer_id_for_account_table = cursor.execute("""SELECT customers_id
+                                            FROM customers
+                                            WHERE customers_name = ?                                            
+                                            """, (customer.customer_name,)).fetchone()
+    close_connection(connection, cursor)
+    print(customer_id_for_account_table)
+    customer.customer_id = customer_id_for_account_table[0]
 
-create_records()
-
+    create_account(bankAccount, customer.customer_id)
+    connection, cursor = open_connection()
+    account_id_for_customer_table = cursor.execute("""SELECT account_id
+                                            FROM account
+                                            ORDER BY account_id DESC                                            
+                                            """).fetchone()
+    close_connection(connection, cursor)
+    bankAccount.account_id = account_id_for_customer_table[0]
+    print(account_id_for_customer_table[0])
+    update_customers(bankAccount.account_id, customer.customer_id)
 
 def get_account():
     query = """SELECT * FROM account"""
@@ -107,15 +118,15 @@ def get_account():
 
 
 def get_customers():
-    query = """SELECT * FROM customers"""
+    query = """SELECT * FROM customers, account"""
     query_database(query)
 
 
-customer1 = Customer(None, "Pavadinimastrecias", None)
-create_customers(customer1)
+create_customers_table()
+create_account_table()
 
-account1 = BankAccount(None, "10987456321", None)
-create_account(account1)
-
-get_account()
+customer1 = Customer(None, "jgj123", None)
+account1 = BankAccount(None, "1546445", None)
+create_records(customer1, account1)
+#get_account()
 get_customers()
